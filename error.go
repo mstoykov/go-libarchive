@@ -7,7 +7,6 @@ import (
 	"io"
 )
 
-
 const (
 	ARCHIVE_EOF   = C.ARCHIVE_EOF
 	ARCHIVE_OK    = C.ARCHIVE_OK
@@ -17,7 +16,7 @@ const (
 )
 
 var (
-	ErrArchiveEOF   = io.EOF 
+	ErrArchiveEOF   = io.EOF
 	ErrArchiveRetry = errors.New("libarchive: RETRY [operation failed but can be retried]")
 	ErrArchiveWarn  = errors.New("libarchive: WARN [success but non-critical error]")
 	ErrArchiveFatal = errors.New("libarchive: FATAL [critical error, archive closing]")
@@ -26,13 +25,13 @@ var (
 func codeToError(e int) error {
 	switch e {
 	case ARCHIVE_EOF:
-		return  ErrArchiveEOF
+		return ErrArchiveEOF
 	case ARCHIVE_FATAL:
-		return  ErrArchiveFatal
+		return ErrArchiveFatal
 	case ARCHIVE_RETRY:
-		return  ErrArchiveRetry
+		return ErrArchiveRetry
 	case ARCHIVE_WARN:
-		return  ErrArchiveWarn
+		return ErrArchiveWarn
 	}
 	return nil
 }

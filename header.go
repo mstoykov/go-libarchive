@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-// ArchiveEntry represents an libarchive archive_entry 
+// ArchiveEntry represents an libarchive archive_entry
 type ArchiveEntry interface {
 	// Not done yet
 	Stat() os.FileInfo

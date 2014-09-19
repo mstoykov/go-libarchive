@@ -15,21 +15,21 @@ func printContents(filename string) {
 		fmt.Printf("Error while opening file:\n %s\n", err)
 		return
 	}
-	archive, err := ar.NewArchive(file)
+	reader, err := ar.NewReader(file)
 	if err != nil {
-		fmt.Printf("Error on NewArchive\n %s\n", err)
+		fmt.Printf("Error on NewReader\n %s\n", err)
 	}
-	defer archive.Free()
-	defer archive.Close()
+	defer reader.Free()
+	defer reader.Close()
 	for {
-		entry, err := archive.Next()
+		entry, err := reader.Next()
 		if err != nil {
 			fmt.Printf("Error on reader.Next():\n%s\n", err)
 			return
 		}
 		fmt.Printf("Name %s\n", entry.PathName())
 		var buf bytes.Buffer
-		size, err := buf.ReadFrom(archive)
+		size, err := buf.ReadFrom(reader)
 
 		if err != nil {
 			fmt.Printf("Error on reading entry from archive:\n%s\n", err)
