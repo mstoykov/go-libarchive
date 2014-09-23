@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestNewArchive(t *testing.T) {
+func TestNewReader(t *testing.T) {
 	test_file, err := os.Open("./fixtures/test.tar")
 	if err != nil {
 		t.Fatalf("Error while reading fixture file %s ", err)
