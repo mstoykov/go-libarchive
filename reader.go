@@ -84,9 +84,11 @@ func (r *Reader) Next() (ArchiveEntry, error) {
 // It acts as io.Reader.Read in any other aspect
 func (r *Reader) Read(b []byte) (n int, err error) {
 	n = int(C.archive_read_data(r.archive, unsafe.Pointer(&b[0]), C.size_t(cap(b))))
-	err = codeToError(n)
 	if n == 0 {
 		err = io.EOF
+	} else if 0 > n { // err
+		err = codeToError(n)
+		n = 0
 	}
 	return
 }
