@@ -10,12 +10,14 @@ import "C"
 
 import (
 	"os"
+	"path/filepath"
+	"syscall"
 	"time"
 )
 
 // ArchiveEntry represents an libarchive archive_entry
 type ArchiveEntry interface {
-	// Not done yet
+	// FileInfo describing archive_entry
 	Stat() os.FileInfo
 	// The name of the entry
 	PathName() string
@@ -27,11 +29,13 @@ type entryImpl struct {
 
 type entryInfo struct {
 	stat *C.struct_stat
+	name string
 }
 
 func (h *entryImpl) Stat() os.FileInfo {
 	info := &entryInfo{}
 	info.stat = C.archive_entry_stat(h.entry)
+	info.name = filepath.Base(h.PathName())
 	return info
 }
 
@@ -42,20 +46,35 @@ func (h *entryImpl) PathName() string {
 }
 
 func (e *entryInfo) Name() string {
-	return "" // fix
+	return e.name
 }
 func (e *entryInfo) Size() int64 {
-	return 0 // fix
+	return int64(e.stat.st_size)
 }
 func (e *entryInfo) Mode() os.FileMode {
-	return os.ModeTemporary // fix
+	mode := os.FileMode(e.stat.st_mode & 0777)
+	switch e.stat.st_mode & syscall.S_IFMT {
+	case syscall.S_IFLNK:
+		mode |= os.ModeSymlink
+	case syscall.S_IFSOCK:
+		mode |= os.ModeSocket
+	case syscall.S_IFCHR:
+		mode |= os.ModeDevice | os.ModeCharDevice
+	case syscall.S_IFBLK:
+		mode |= os.ModeDevice
+	case syscall.S_IFDIR:
+		mode |= os.ModeDir
+	case syscall.S_IFIFO:
+		mode |= os.ModeNamedPipe
+	}
+	return mode
 }
 func (e *entryInfo) ModTime() time.Time {
-	return time.Now() // fix
+	return time.Unix(int64(e.stat.st_mtim.tv_sec), int64(e.stat.st_mtim.tv_nsec))
 }
 func (e *entryInfo) IsDir() bool {
-	return false // fix
+	return e.stat.st_mode&syscall.S_IFDIR != 0
 }
 func (e *entryInfo) Sys() interface{} {
-	return nil // fix
+	return e.stat
 }

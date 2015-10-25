@@ -93,6 +93,11 @@ func (r *Reader) Read(b []byte) (n int, err error) {
 	return
 }
 
+// Size returns compressed size of the current archive entry
+func (r *Reader) Size() int {
+	return int(C.archive_filter_bytes(r.archive, C.int(0)))
+}
+
 // Free frees the resources the underlying libarchive archive is using
 // calling archive_read_free
 func (r *Reader) Free() error {
