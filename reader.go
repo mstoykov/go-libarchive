@@ -9,6 +9,7 @@ package archive
 */
 import "C"
 import (
+	"errors"
 	"io"
 	"unsafe"
 )
@@ -16,17 +17,21 @@ import (
 // Reader represents libarchive archive
 type Reader struct {
 	archive *C.struct_archive
-	reader  io.Reader // the io.Reader from which we Read
-	buffer  []byte    // buffer for the raw reading
+	reader  io.ReadSeeker // the io.Reader from which we Read
+	buffer  []byte        // buffer for the raw reading
+	index   int64         // current reading index
 }
 
 // NewReader returns new Archive by calling archive_read_open
-func NewReader(reader io.Reader) (r *Reader, err error) {
+func NewReader(reader io.ReadSeeker) (r *Reader, err error) {
 	r = new(Reader)
 	r.buffer = make([]byte, 1024)
 	r.archive = C.archive_read_new()
 	C.archive_read_support_filter_all(r.archive)
 	C.archive_read_support_format_all(r.archive)
+
+	seek_callback := (*C.archive_seek_callback)(C.go_libarchive_seek)
+	C.archive_read_set_seek_callback(r.archive, seek_callback)
 
 	r.reader = reader
 
@@ -62,6 +67,16 @@ func myread(archive *C.struct_archive, client_data unsafe.Pointer, block unsafe.
 	return C.size_t(read)
 }
 
+//export myseek
+func myseek(archive *C.struct_archive, client_data unsafe.Pointer, request C.int64_t, whence C.int) C.int64_t {
+	reader := (*Reader)(client_data)
+	offset, err := reader.reader.Seek(int64(request), int(whence))
+	if err != nil {
+		return C.int64_t(0)
+	}
+	return C.int64_t(offset)
+}
+
 // Next calls archive_read_next_header and returns an
 // interpretation of the ArchiveEntry which is a wrapper around
 // libarchive's archive_entry, or Err.
@@ -90,7 +105,28 @@ func (r *Reader) Read(b []byte) (n int, err error) {
 		err = codeToError(n)
 		n = 0
 	}
+	r.index += int64(n)
 	return
+}
+
+// Seek sets the offset for the next Read to offset
+func (r *Reader) Seek(offset int64, whence int) (int64, error) {
+	var abs int64
+	switch whence {
+	case 0:
+		abs = offset
+	case 1:
+		abs = int64(r.index) + offset
+	case 2:
+		abs = int64(len(r.buffer)) + offset
+	default:
+		return 0, errors.New("libarchive: SEEK [invalid whence]")
+	}
+	if abs < 0 {
+		return 0, errors.New("libarchive: SEEK [negative position]")
+	}
+	r.index = abs
+	return abs, nil
 }
 
 // Size returns compressed size of the current archive entry
