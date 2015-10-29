@@ -37,7 +37,7 @@ func NewReader(reader io.ReadSeeker) (r *Reader, err error) {
 
 	e := C.go_libarchive_open(r.archive, unsafe.Pointer(r))
 
-	err = codeToError(int(e))
+	err = codeToError(r.archive, int(e))
 	return
 }
 
@@ -57,7 +57,7 @@ func myclose(archive *C.struct_archive, client_data unsafe.Pointer) C.int {
 func myread(archive *C.struct_archive, client_data unsafe.Pointer, block unsafe.Pointer) C.size_t {
 	reader := (*Reader)(client_data)
 	read, err := reader.reader.Read(reader.buffer)
-	if err != nil && err != io.EOF {
+	if err != nil && err != ErrArchiveEOF {
 		// set error
 		read = -1
 	}
@@ -86,7 +86,8 @@ func myseek(archive *C.struct_archive, client_data unsafe.Pointer, request C.int
 func (r *Reader) Next() (ArchiveEntry, error) {
 	e := new(entryImpl)
 
-	err := codeToError(int(C.archive_read_next_header(r.archive, &e.entry)))
+	errno := int(C.archive_read_next_header(r.archive, &e.entry))
+	err := codeToError(r.archive, errno)
 
 	if err != nil {
 		e = nil
@@ -100,9 +101,9 @@ func (r *Reader) Next() (ArchiveEntry, error) {
 func (r *Reader) Read(b []byte) (n int, err error) {
 	n = int(C.archive_read_data(r.archive, unsafe.Pointer(&b[0]), C.size_t(cap(b))))
 	if n == 0 {
-		err = io.EOF
+		err = ErrArchiveEOF
 	} else if 0 > n { // err
-		err = codeToError(n)
+		err = codeToError(r.archive, ARCHIVE_FAILED)
 		n = 0
 	}
 	r.index += int64(n)
