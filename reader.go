@@ -9,6 +9,7 @@ package archive
 */
 import "C"
 import (
+	"errors"
 	"io"
 	"unsafe"
 )
@@ -16,23 +17,27 @@ import (
 // Reader represents libarchive archive
 type Reader struct {
 	archive *C.struct_archive
-	reader  io.Reader // the io.Reader from which we Read
-	buffer  []byte    // buffer for the raw reading
+	reader  io.ReadSeeker // the io.Reader from which we Read
+	buffer  []byte        // buffer for the raw reading
+	index   int64         // current reading index
 }
 
 // NewReader returns new Archive by calling archive_read_open
-func NewReader(reader io.Reader) (r *Reader, err error) {
+func NewReader(reader io.ReadSeeker) (r *Reader, err error) {
 	r = new(Reader)
 	r.buffer = make([]byte, 1024)
 	r.archive = C.archive_read_new()
 	C.archive_read_support_filter_all(r.archive)
 	C.archive_read_support_format_all(r.archive)
 
+	seek_callback := (*C.archive_seek_callback)(C.go_libarchive_seek)
+	C.archive_read_set_seek_callback(r.archive, seek_callback)
+
 	r.reader = reader
 
 	e := C.go_libarchive_open(r.archive, unsafe.Pointer(r))
 
-	err = codeToError(int(e))
+	err = codeToError(r.archive, int(e))
 	return
 }
 
@@ -52,7 +57,7 @@ func myclose(archive *C.struct_archive, client_data unsafe.Pointer) C.int {
 func myread(archive *C.struct_archive, client_data unsafe.Pointer, block unsafe.Pointer) C.size_t {
 	reader := (*Reader)(client_data)
 	read, err := reader.reader.Read(reader.buffer)
-	if err != nil && err != io.EOF {
+	if err != nil && err != ErrArchiveEOF {
 		// set error
 		read = -1
 	}
@@ -60,6 +65,16 @@ func myread(archive *C.struct_archive, client_data unsafe.Pointer, block unsafe.
 	*(*uintptr)(block) = uintptr(unsafe.Pointer(&reader.buffer[0]))
 
 	return C.size_t(read)
+}
+
+//export myseek
+func myseek(archive *C.struct_archive, client_data unsafe.Pointer, request C.int64_t, whence C.int) C.int64_t {
+	reader := (*Reader)(client_data)
+	offset, err := reader.reader.Seek(int64(request), int(whence))
+	if err != nil {
+		return C.int64_t(0)
+	}
+	return C.int64_t(offset)
 }
 
 // Next calls archive_read_next_header and returns an
@@ -71,7 +86,8 @@ func myread(archive *C.struct_archive, client_data unsafe.Pointer, block unsafe.
 func (r *Reader) Next() (ArchiveEntry, error) {
 	e := new(entryImpl)
 
-	err := codeToError(int(C.archive_read_next_header(r.archive, &e.entry)))
+	errno := int(C.archive_read_next_header(r.archive, &e.entry))
+	err := codeToError(r.archive, errno)
 
 	if err != nil {
 		e = nil
@@ -85,12 +101,33 @@ func (r *Reader) Next() (ArchiveEntry, error) {
 func (r *Reader) Read(b []byte) (n int, err error) {
 	n = int(C.archive_read_data(r.archive, unsafe.Pointer(&b[0]), C.size_t(cap(b))))
 	if n == 0 {
-		err = io.EOF
+		err = ErrArchiveEOF
 	} else if 0 > n { // err
-		err = codeToError(n)
+		err = codeToError(r.archive, ARCHIVE_FAILED)
 		n = 0
 	}
+	r.index += int64(n)
 	return
+}
+
+// Seek sets the offset for the next Read to offset
+func (r *Reader) Seek(offset int64, whence int) (int64, error) {
+	var abs int64
+	switch whence {
+	case 0:
+		abs = offset
+	case 1:
+		abs = int64(r.index) + offset
+	case 2:
+		abs = int64(len(r.buffer)) + offset
+	default:
+		return 0, errors.New("libarchive: SEEK [invalid whence]")
+	}
+	if abs < 0 {
+		return 0, errors.New("libarchive: SEEK [negative position]")
+	}
+	r.index = abs
+	return abs, nil
 }
 
 // Size returns compressed size of the current archive entry
