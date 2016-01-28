@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"os"
 
 	ar "github.com/MStoykov/go-libarchive"
@@ -24,6 +25,9 @@ func printContents(filename string) {
 	for {
 		entry, err := reader.Next()
 		if err != nil {
+			if err == io.EOF {
+				break
+			}
 			fmt.Printf("Error on reader.Next():\n%s\n", err)
 			return
 		}
