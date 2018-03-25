@@ -13,5 +13,3 @@ int64_t go_libarchive_seek(struct archive * a, void *client_data, int64_t reques
 ssize_t go_libarchive_open(struct archive *a, void *client_data) {
 	return archive_read_open(a, client_data, myopen, readWrap, myclose);
 }
-
-

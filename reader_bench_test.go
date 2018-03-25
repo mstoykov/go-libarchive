@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	ar "github.com/MStoykov/go-libarchive"
+	ar "github.com/sergeyfedotov/go-libarchive"
 )
 
 type ArchiveReader interface {
@@ -17,14 +17,14 @@ type ArchiveReader interface {
 
 var buf = make([]byte, 4096) // probably fine
 
-func BenchTestFuncLib(b *testing.B, file io.Reader) {
+func BenchTestFuncLib(b *testing.B, file io.ReadSeeker) {
 	reader, _ := ar.NewReader(file)
 	defer reader.Free()
 	defer reader.Close()
 	runBenchTest(b, wrapLibArchive(reader))
 }
 
-func BenchTestFuncSTD(b *testing.B, file io.Reader) {
+func BenchTestFuncSTD(b *testing.B, file io.ReadSeeker) {
 	reader := tar.NewReader(file)
 	runBenchTest(b, wrapTarArchive(reader))
 }
@@ -81,7 +81,7 @@ func runBenchTest(b *testing.B, a ArchiveReader) {
 	}
 }
 
-func benchTemplate(b *testing.B, testFunc func(b *testing.B, file io.Reader)) {
+func benchTemplate(b *testing.B, testFunc func(b *testing.B, file io.ReadSeeker)) {
 	matches, err := filepath.Glob("./fixtures/bench[0-9]*.tar")
 	if err != nil {
 		b.Skipf("Error while getting benchmark fixtures:\n%s", err)

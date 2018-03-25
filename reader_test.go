@@ -7,12 +7,12 @@ import (
 )
 
 func TestNewReader(t *testing.T) {
-	test_file, err := os.Open("./fixtures/test.tar")
+	testFile, err := os.Open("./fixtures/test.tar")
 	if err != nil {
 		t.Fatalf("Error while reading fixture file %s ", err)
 	}
 
-	reader, err := NewReader(test_file)
+	reader, err := NewReader(testFile)
 	if err != nil {
 		t.Fatalf("Error on creating Archive from a io.Reader:\n %s", err)
 	}
@@ -60,19 +60,19 @@ func TestNewReader(t *testing.T) {
 }
 
 func TestTwoReaders(t *testing.T) {
-	test_file, err := os.Open("./fixtures/test.tar")
+	testFile, err := os.Open("./fixtures/test.tar")
 	if err != nil {
 		t.Fatalf("Error while reading fixture file %s ", err)
 	}
 
-	_, err = NewReader(test_file)
+	_, err = NewReader(testFile)
 
-	test_file2, err := os.Open("./fixtures/test2.tar")
+	testFile2, err := os.Open("./fixtures/test2.tar")
 	if err != nil {
 		t.Fatalf("Error while reading fixture file %s ", err)
 	}
 
-	_, err = NewReader(test_file2)
+	_, err = NewReader(testFile2)
 	if err != nil {
 		t.Fatalf("Error on creating Archive from a io.Reader:\n %s", err)
 	}
