@@ -12,7 +12,6 @@ import (
 	"os"
 	"path/filepath"
 	"syscall"
-	"time"
 )
 
 // ArchiveEntry represents an libarchive archive_entry
@@ -68,9 +67,6 @@ func (e *entryInfo) Mode() os.FileMode {
 		mode |= os.ModeNamedPipe
 	}
 	return mode
-}
-func (e *entryInfo) ModTime() time.Time {
-	return time.Unix(int64(e.stat.st_mtim.tv_sec), int64(e.stat.st_mtim.tv_nsec))
 }
 func (e *entryInfo) IsDir() bool {
 	return e.stat.st_mode&syscall.S_IFDIR != 0
