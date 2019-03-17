@@ -22,7 +22,7 @@ type ReedSeeker struct {
 	index   int64         // current reading index
 }
 
-// NewReader returns new Archive by calling archive_read_open
+// NewReadSeeker returns new Archive by calling archive_read_open
 func NewReadSeeker(reader io.ReadSeeker) (r *ReedSeeker, err error) {
 	r = new(ReedSeeker)
 	r.buffer = make([]byte, 1024)
