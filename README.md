@@ -1,10 +1,11 @@
 go-libarchive
 =============
 
-Golang bindings for the [libarchive](http://libarchive.org) library.
+Golang minimal bindings for the [libarchive](http://libarchive.org) library.
+
+Compatible with Go 1.6+ cgo pointer rules.
 
 Acknowledgments
 ===============
 
-based on [robxu9's go-libarchive](https://github.com/robxu9/go-libarchive)
-
+based on [MStoykov go-libarchive](https://github.com/MStoykov/go-libarchive)

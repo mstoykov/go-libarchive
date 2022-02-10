@@ -1,0 +1,15 @@
+language: go
+
+matrix:
+  include:
+    - go: "1.9"
+    - go: "1.10.x"
+
+install:
+  - sudo apt-get update && sudo apt-get install -y libarchive-dev
+  - go get -u golang.org/x/lint/golint
+
+script:
+  - golint ./...
+  - go vet ./...
+  - go test ./...
